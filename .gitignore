@@ -1,0 +1,14 @@
+# Build output
+bin/
+dist/
+
+# Environment (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# Air live-reload temp dir
+tmp/
+
+# OS
+.DS_Store
