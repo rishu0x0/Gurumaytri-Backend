@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,6 +34,16 @@ import (
 	"school-management/backend/internal/subjects"
 	jwtpkg "school-management/backend/pkg/jwt"
 )
+
+func init() {
+	// Force IPv4 only for Render deployment (IPv6 not available)
+	net.DefaultResolver = &net.Resolver{
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{}
+			return d.DialContext(ctx, "tcp4", address)
+		},
+	}
+}
 
 func main() {
 	_ = godotenv.Load()
