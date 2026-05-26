@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"log"
+	"net"
 	"strings"
 	"time"
 
@@ -10,9 +11,10 @@ import (
 )
 
 // NewPool creates a pgx connection pool with retry logic for Render deployments.
-// It appends sslmode=require if not already present (required for Supabase on Render).
+// Forces IPv4-only connections because Render does not support IPv6 outbound.
+// Appends sslmode=require if not already present (required for Supabase).
 func NewPool(databaseURL string) *pgxpool.Pool {
-	// Ensure sslmode=require is present — mandatory for Supabase from external hosts like Render
+	// Ensure sslmode=require is present — mandatory for Supabase from external hosts
 	if !strings.Contains(databaseURL, "sslmode=") {
 		if strings.Contains(databaseURL, "?") {
 			databaseURL += "&sslmode=require"
@@ -24,6 +26,13 @@ func NewPool(databaseURL string) *pgxpool.Pool {
 	cfg, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		log.Fatalf("failed to parse database URL: %v", err)
+	}
+
+	// Force IPv4-only dialer — Render has no IPv6 outbound support.
+	// This overrides pgx's default dialer so TCP connections always use tcp4.
+	cfg.ConnConfig.Config.DialFunc = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		d := &net.Dialer{Timeout: 10 * time.Second}
+		return d.DialContext(ctx, "tcp4", addr)
 	}
 
 	cfg.MaxConns = 10
